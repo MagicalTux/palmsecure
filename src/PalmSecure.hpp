@@ -7,6 +7,7 @@ public:
 	PalmSecure();
 
 	bool open();
+	QString deviceName();
 
 private:
 	QUsb usb;
