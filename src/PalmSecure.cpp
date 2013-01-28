@@ -105,13 +105,13 @@ void PalmSecure::captureLarge() {
 	dev->controlTransfer(0xc0, 0x46, 0x5d0, 0, 3); // returns 460100
 	dev->controlTransfer(0xc0, 0x47, 0x10, 0, 3); // returns 470100
 	dev->controlTransfer(0xc0, 0x49, 0x100, 0, 3); // returns 490100
-	dev->controlTransfer(0xc0, 0x4a, 0x78, 240, 5); // returns 4a01005802
+	dev->controlTransfer(0xc0, 0x4a, 0x78, 240, 5); // returns 4a01005802 - image size related?
 	dev->controlTransfer(0xc0, 0x46, 0xc8, 3, 3); // returns 460100
 	dev->controlTransfer(0xc0, 0x47, 0x10, 3, 3); // returns 470100
 	dev->controlTransfer(0xc0, 0x49, 0x100, 3, 3); // returns 490100
 	dev->controlTransfer(0xc0, 0x42, 0x100, 2, 3); // returns 420100
 	dev->controlTransfer(0xc0, 0x43, 0, 0, 3); // returns 430100
-	dev->controlTransfer(0xc0, 0x4a, 0, 480, 5); // returns 4a0100b004
+	dev->controlTransfer(0xc0, 0x4a, 0, 480, 5); // returns 4a0100b004 - image height?
 	dev->controlTransfer(0xc0, 0x44, 0, 0, 6); // returns 440100b00400
 	qDebug("Capture 1");
 	QByteArray dat1 = dev->bulkReceive(2, 307200); // vein data
@@ -142,13 +142,13 @@ void PalmSecure::captureSmall() {
 	dev->controlTransfer(0xc0, 0x46, 0x7b7, 2, 3); // returns 460100
 	dev->controlTransfer(0xc0, 0x47, 0x10, 2, 3); // returns 470100
 	dev->controlTransfer(0xc0, 0x49, 0x100, 2, 3); // returns 490100
-	dev->controlTransfer(0xc0, 0x4c, 0xc0, 96, 5); // returns 4c0100f000
+	dev->controlTransfer(0xc0, 0x4c, 0xc0, 96, 5); // returns 4c0100f000 - image height?
 	dev->controlTransfer(0xc0, 0x46, 0xc8, 3, 3); // returns 460100
 	dev->controlTransfer(0xc0, 0x47, 0x10, 3, 3); // returns 470100
 	dev->controlTransfer(0xc0, 0x49, 0x100, 3, 3); // returns 490100
 	dev->controlTransfer(0xc0, 0x42, 0, 258, 3); // returns 420100
 	dev->controlTransfer(0xc0, 0x43, 0, 0, 3); // returns 430100
-	dev->controlTransfer(0xc0, 0x4c, 0xc0, 96, 5); // returns 4c0100f000
+	dev->controlTransfer(0xc0, 0x4c, 0xc0, 96, 5); // returns 4c0100f000 - image height?
 	dev->controlTransfer(0xc0, 0x44, 2, 0, 6); // returns 440100f00000
 	qDebug("Capture 4");
 	QByteArray dat4 = dev->bulkReceive(2, 61440);
