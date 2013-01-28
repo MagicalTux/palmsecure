@@ -28,6 +28,7 @@ void PalmSecure::stop() {
 	dev->controlTransfer(0xc0, 0x27, 0x07, 0, 8); // returns ?
 	dev->controlTransfer(0xc0, 0x27, 0x08, 0, 8); // returns ?
 	dev->controlTransfer(0xc0, 0x27, 0x00, 0, 6); // returns ?
+	dev->controlTransfer(0xc0, 0x45, 0, 0, 3); // returns 450100
 }
 
 QString PalmSecure::deviceName() {
@@ -158,7 +159,7 @@ QList<QImage> PalmSecure::captureLarge() {
 	dat = dev->bulkReceive(2, 153600); // "4 dots"
 	res.append(bufToImage(dat, 640, 240));
 
-	// switch off light?
+	// back to scan mode
 	dev->controlTransfer(0xc0, 0x27, 7, 1, 8); // returns 2707000000000000
 	dev->controlTransfer(0xc0, 0x27, 8, 1, 8); // returns 2708000000000000
 	dev->controlTransfer(0xc0, 0x27, 0, 1, 6); // returns 270000280000
@@ -199,7 +200,7 @@ QList<QImage> PalmSecure::captureSmall() {
 	dat = dev->bulkReceive(2, 153600);
 	res.append(bufToImage(dat, 640, 240));
 
-	// switch off light?
+	// back to scan mode
 	dev->controlTransfer(0xc0, 0x27, 7, 1, 8); // returns 2707000000000000
 	dev->controlTransfer(0xc0, 0x27, 8, 1, 8); // returns 2708000000000000
 	dev->controlTransfer(0xc0, 0x27, 0, 1, 6); // returns 270000280000
