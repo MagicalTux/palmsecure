@@ -2,6 +2,7 @@
 #include "QUsbDevice.hpp"
 #include <QFile>
 #include <QColor>
+#include <QTime>
 
 PalmSecure::PalmSecure() {
 	connect(&scan, SIGNAL(timeout()), this, SLOT(do_detect()));
@@ -40,6 +41,11 @@ QString PalmSecure::deviceName() {
 }
 
 bool PalmSecure::open() {
+	// init random mask
+	qsrand(QTime::currentTime().msec());
+	mask = QByteArray();
+	for(int i = 0; i < 307200; i++) mask.append((char)(qrand() % 256));
+
 	dev = usb.getFirstDevice(0x04c5, 0x1084); // FUJITSU Imaging Device
 	if (dev == NULL) {
 		qDebug("PalmSecure: failed to open device");
@@ -62,14 +68,14 @@ bool PalmSecure::open() {
 	dev->controlTransfer(0xc0, 0x29, 1, 4, 4); // returns 29010400 (probably means "flag value is 4")
 
 	// We initialize device's random generator with this method, it seems
-	QByteArray key = dev->controlTransfer(0xc0, 0x35, 0x2696, 0x63b4, 18); // returns 3500f15d482bb74e9c3f92b3f6cc10f9360d
-	if (key != QByteArray::fromHex("3500f15d482bb74e9c3f92b3f6cc10f9360d")) {
-		qDebug("PalmSecure: This device doesn't work like we believed it would");
-		delete dev;
-		return false;
-	}
+	QByteArray key = dev->controlTransfer(0xc0, 0x35, qrand() % 0xffff, qrand() % 0xffff, 18); // returns 3500 + encryption key
 	dev->controlTransfer(0xc0, 0x36, 0, 0, 3);
-	qint64 res = dev->bulkSend(0x01, QByteArray(key.mid(2, 8).repeated(80) + key.mid(10, 8).repeated(80)).repeated(240));
+
+	// "encrypt" mask and send it
+	QByteArray mask2 = QByteArray(key.mid(2, 8).repeated(80) + key.mid(10, 8).repeated(80)).repeated(240);
+	for(int i = 0; i < 307200; i++) mask2[i] = mask2.at(i) ^ mask.at(i);
+
+	qint64 res = dev->bulkSend(0x01, mask2);
 	qDebug("PalmSecure: Wrote %lld bytes to device (should be 307200)", res);
 	if (res == -1) {
 		delete dev;
@@ -146,6 +152,7 @@ QList<QImage> PalmSecure::captureLarge() {
 
 	qDebug("Capture 1");
 	QByteArray dat = dev->bulkReceive(2, 307200); // vein data, 640x480
+	for(int i = 0; i < 240*640; i++) dat[i+120*640] = dat.at(i+120*640) ^ mask.at(i);
 	res.append(bufToImage(dat, 640, 480));
 
 	qDebug("Capture 2");
@@ -187,6 +194,7 @@ QList<QImage> PalmSecure::captureSmall() {
 
 	qDebug("Capture 4");
 	QByteArray dat = dev->bulkReceive(2, 61440);
+	for(int i = 0; i < 96*640; i++) dat[i] = dat.at(i) ^ mask.at(i);
 	res.append(bufToImage(dat, 640, 96));
 
 	qDebug("Capture 5");
