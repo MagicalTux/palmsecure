@@ -5,7 +5,9 @@ int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
 
 	PalmSecure *p = new PalmSecure();
-	p->open();
+	if (!p->open()) return 2; // failed
+
+	p->capture();
 
 	return app.exec();
 }
