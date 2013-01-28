@@ -71,7 +71,7 @@ bool PalmSecure::open() {
 	return true;
 }
 
-void PalmSecure::capture() {
+void PalmSecure::detect() {
 	qDebug("PalmSecure: capture");
 
 	// switch on light?
@@ -89,40 +89,83 @@ void PalmSecure::capture() {
 		bool ok = true;
 		for(int i = 0; i < 4; i++) if ((d[i] < 40) || (d[i] > 50)) { ok = false; break; }
 		if (ok) {
-			qDebug("Capture!");
-			dev->controlTransfer(0xc0, 0x4e, 0, 0, 3); // returns 4e0100
-			dev->controlTransfer(0xc0, 0x4e, 1, 0, 3); // returns 4e0100
-			dev->controlTransfer(0xc0, 0x4e, 2, 0, 3); // returns 4e0100
-			dev->controlTransfer(0xc0, 0x4e, 3, 0, 3); // returns 4e0100
-			dev->controlTransfer(0xc0, 0x46, 0x5d0, 0, 3); // returns 460100
-			dev->controlTransfer(0xc0, 0x47, 0x10, 0, 3); // returns 470100
-			dev->controlTransfer(0xc0, 0x49, 0x100, 0, 3); // returns 490100
-			dev->controlTransfer(0xc0, 0x4a, 0x78, 240, 5); // returns 4a01005802
-			dev->controlTransfer(0xc0, 0x46, 0xc8, 3, 3); // returns 460100
-			dev->controlTransfer(0xc0, 0x47, 0x10, 3, 3); // returns 470100
-			dev->controlTransfer(0xc0, 0x49, 0x100, 3, 3); // returns 490100
-			dev->controlTransfer(0xc0, 0x42, 0x100, 2, 3); // returns 420100
-			dev->controlTransfer(0xc0, 0x43, 0, 0, 3); // returns 430100
-			dev->controlTransfer(0xc0, 0x4a, 0, 480, 5); // returns 4a0100b004
-			dev->controlTransfer(0xc0, 0x44, 0, 0, 6); // returns 440100b00400
-			qDebug("Capture 1");
-			QByteArray dat1 = dev->bulkReceive(2, 307200);
-			QFile f("data1.dat"); f.open(QIODevice::WriteOnly | QIODevice::Truncate); f.write(dat1); f.close();
-			dev->controlTransfer(0xc0, 0x44, 0, 1, 6); // returns 440100b00400
-			qDebug("Capture 2");
-			QByteArray dat2 = dev->bulkReceive(2, 307200);
-			QFile f2("data2.dat"); f2.open(QIODevice::WriteOnly | QIODevice::Truncate); f2.write(dat2); f2.close();
-			dev->controlTransfer(0xc0, 0x4d, 0x78, 240, 5); // returns 4d01005802
-			dev->controlTransfer(0xc0, 0x44, 3, 2, 6); // returns 440100580200
-			qDebug("Capture 3");
-			QByteArray dat3 = dev->bulkReceive(2, 153600);
-
-			qDebug("dat1 length: %d", dat1.size());
-			// OK, write to file
-			QFile f3("data3.dat"); f3.open(QIODevice::WriteOnly | QIODevice::Truncate); f3.write(dat3); f3.close();
+			captureLarge();
 			return;
 		}
 		usleep(20000);
 	}
+}
+
+void PalmSecure::captureLarge() {
+	qDebug("Capture!");
+	dev->controlTransfer(0xc0, 0x4e, 0, 0, 3); // returns 4e0100
+	dev->controlTransfer(0xc0, 0x4e, 1, 0, 3); // returns 4e0100
+	dev->controlTransfer(0xc0, 0x4e, 2, 0, 3); // returns 4e0100
+	dev->controlTransfer(0xc0, 0x4e, 3, 0, 3); // returns 4e0100
+	dev->controlTransfer(0xc0, 0x46, 0x5d0, 0, 3); // returns 460100
+	dev->controlTransfer(0xc0, 0x47, 0x10, 0, 3); // returns 470100
+	dev->controlTransfer(0xc0, 0x49, 0x100, 0, 3); // returns 490100
+	dev->controlTransfer(0xc0, 0x4a, 0x78, 240, 5); // returns 4a01005802
+	dev->controlTransfer(0xc0, 0x46, 0xc8, 3, 3); // returns 460100
+	dev->controlTransfer(0xc0, 0x47, 0x10, 3, 3); // returns 470100
+	dev->controlTransfer(0xc0, 0x49, 0x100, 3, 3); // returns 490100
+	dev->controlTransfer(0xc0, 0x42, 0x100, 2, 3); // returns 420100
+	dev->controlTransfer(0xc0, 0x43, 0, 0, 3); // returns 430100
+	dev->controlTransfer(0xc0, 0x4a, 0, 480, 5); // returns 4a0100b004
+	dev->controlTransfer(0xc0, 0x44, 0, 0, 6); // returns 440100b00400
+	qDebug("Capture 1");
+	QByteArray dat1 = dev->bulkReceive(2, 307200); // vein data
+	QFile f("data1.dat"); f.open(QIODevice::WriteOnly | QIODevice::Truncate); f.write(dat1); f.close();
+	dev->controlTransfer(0xc0, 0x44, 0, 1, 6); // returns 440100b00400
+	qDebug("Capture 2");
+	QByteArray dat2 = dev->bulkReceive(2, 307200); // normal picture
+	QFile f2("data2.dat"); f2.open(QIODevice::WriteOnly | QIODevice::Truncate); f2.write(dat2); f2.close();
+	dev->controlTransfer(0xc0, 0x4d, 0x78, 240, 5); // returns 4d01005802
+	dev->controlTransfer(0xc0, 0x44, 3, 2, 6); // returns 440100580200
+	qDebug("Capture 3");
+	QByteArray dat3 = dev->bulkReceive(2, 153600); // "4 dots"
+
+	// OK, write to file
+	QFile f3("data3.dat"); f3.open(QIODevice::WriteOnly | QIODevice::Truncate); f3.write(dat3); f3.close();
+
+	// switch off light?
+	dev->controlTransfer(0xc0, 0x27, 7, 1, 8); // returns 2707000000000000
+	dev->controlTransfer(0xc0, 0x27, 8, 1, 8); // returns 2708000000000000
+	dev->controlTransfer(0xc0, 0x27, 0, 1, 6); // returns 270000280000
+}
+
+void PalmSecure::captureSmall() {
+	dev->controlTransfer(0xc0, 0x4e, 0, 0, 3); // returns 4e0100
+	dev->controlTransfer(0xc0, 0x4e, 1, 0, 3); // returns 4e0100
+	dev->controlTransfer(0xc0, 0x4e, 2, 0, 3); // returns 4e0100
+	dev->controlTransfer(0xc0, 0x4e, 3, 0, 3); // returns 4e0100
+	dev->controlTransfer(0xc0, 0x46, 0x7b7, 2, 3); // returns 460100
+	dev->controlTransfer(0xc0, 0x47, 0x10, 2, 3); // returns 470100
+	dev->controlTransfer(0xc0, 0x49, 0x100, 2, 3); // returns 490100
+	dev->controlTransfer(0xc0, 0x4c, 0xc0, 96, 5); // returns 4c0100f000
+	dev->controlTransfer(0xc0, 0x46, 0xc8, 3, 3); // returns 460100
+	dev->controlTransfer(0xc0, 0x47, 0x10, 3, 3); // returns 470100
+	dev->controlTransfer(0xc0, 0x49, 0x100, 3, 3); // returns 490100
+	dev->controlTransfer(0xc0, 0x42, 0, 258, 3); // returns 420100
+	dev->controlTransfer(0xc0, 0x43, 0, 0, 3); // returns 430100
+	dev->controlTransfer(0xc0, 0x4c, 0xc0, 96, 5); // returns 4c0100f000
+	dev->controlTransfer(0xc0, 0x44, 2, 0, 6); // returns 440100f00000
+	qDebug("Capture 4");
+	QByteArray dat4 = dev->bulkReceive(2, 61440);
+	QFile f4("data4.dat"); f4.open(QIODevice::WriteOnly | QIODevice::Truncate); f4.write(dat4); f4.close();
+	dev->controlTransfer(0xc0, 0x44, 2, 1, 6); // returns 440100f00000
+	qDebug("Capture 5");
+	QByteArray dat5 = dev->bulkReceive(2, 61440);
+	QFile f5("data5.dat"); f5.open(QIODevice::WriteOnly | QIODevice::Truncate); f5.write(dat5); f5.close();
+	dev->controlTransfer(0xc0, 0x4d, 0x78, 240, 5); // returns 4d01005802
+	dev->controlTransfer(0xc0, 0x44, 3, 2, 6); // returns 440100580200
+	qDebug("Capture 6");
+	QByteArray dat6 = dev->bulkReceive(2, 153600);
+	QFile f6("data6.dat"); f6.open(QIODevice::WriteOnly | QIODevice::Truncate); f6.write(dat6); f6.close();
+
+	// switch off light?
+	dev->controlTransfer(0xc0, 0x27, 7, 1, 8); // returns 2707000000000000
+	dev->controlTransfer(0xc0, 0x27, 8, 1, 8); // returns 2708000000000000
+	dev->controlTransfer(0xc0, 0x27, 0, 1, 6); // returns 270000280000
 }
 

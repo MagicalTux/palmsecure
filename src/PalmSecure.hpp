@@ -7,7 +7,9 @@ public:
 	PalmSecure();
 
 	bool open();
-	void capture();
+	void detect();
+	void captureLarge();
+	void captureSmall();
 	QString deviceName();
 
 private:
