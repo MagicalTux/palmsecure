@@ -194,22 +194,24 @@ QList<QImage> PalmSecure::captureSmall() {
 	dev->controlTransfer(0xc0, 0x43, 0, 0, 3); // returns 430100
 	dev->controlTransfer(0xc0, 0x4c, 0xc0, 96, 5); // returns 4c0100f000 - image height?
 	dev->controlTransfer(0xc0, 0x44, 2, 0, 6); // returns 440100f00000
+
 	qDebug("Capture 4");
-	QByteArray dat4 = dev->bulkReceive(2, 61440);
+	QByteArray dat = dev->bulkReceive(2, 61440);
 	// apply mask
-	for(int i = 0; i < 96*640; i++) {
-		dat4[i] = dat4.at(i) ^ mask.at(i);
-	}
-	QFile f4("data4.dat"); f4.open(QIODevice::WriteOnly | QIODevice::Truncate); f4.write(dat4); f4.close();
-	dev->controlTransfer(0xc0, 0x44, 2, 1, 6); // returns 440100f00000
+	for(int i = 0; i < 96*640; i++)
+		dat[i] = dat.at(i) ^ mask.at(i);
+	res.append(bufToImage(dat, 640, 96));
+
 	qDebug("Capture 5");
-	QByteArray dat5 = dev->bulkReceive(2, 61440);
-	QFile f5("data5.dat"); f5.open(QIODevice::WriteOnly | QIODevice::Truncate); f5.write(dat5); f5.close();
+	dev->controlTransfer(0xc0, 0x44, 2, 1, 6); // returns 440100f00000
+	dat = dev->bulkReceive(2, 61440);
+	res.append(bufToImage(dat, 640, 96));
+
+	qDebug("Capture 6");
 	dev->controlTransfer(0xc0, 0x4d, 0x78, 240, 5); // returns 4d01005802
 	dev->controlTransfer(0xc0, 0x44, 3, 2, 6); // returns 440100580200
-	qDebug("Capture 6");
-	QByteArray dat6 = dev->bulkReceive(2, 153600);
-	QFile f6("data6.dat"); f6.open(QIODevice::WriteOnly | QIODevice::Truncate); f6.write(dat6); f6.close();
+	dat = dev->bulkReceive(2, 153600);
+	res.append(bufToImage(dat, 640, 240));
 
 	// switch off light?
 	dev->controlTransfer(0xc0, 0x27, 7, 1, 8); // returns 2707000000000000
