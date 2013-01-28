@@ -56,6 +56,30 @@ qint64 QUsbDevice::bulkSendFile(int endpoint, const QString &file) {
 	return res;
 }
 
+qint64 QUsbDevice::bulkSend(int endpoint, const QByteArray &buf) {
+	qint64 final = 0;
+	qint64 offset = 0;
+	while(true) {
+		QByteArray data = buf.mid(offset, 16384); // usually good enough to read
+		if (data.isNull()) break;
+		int tx = 0;
+		int res = libusb_bulk_transfer(dev, endpoint & 0x7f, (unsigned char*)data.data(), data.length(), &tx, 0);
+		if (res < 0) {
+			qDebug("QUsbDevice: failed write");
+			handleLibUsbRes(res);
+			return -1;
+		}
+		if (tx != data.length()) {
+			qDebug("QUsbDevice: failed to write all the data");
+			return -1;
+		}
+		final += tx;
+		offset += tx;
+		if (offset >= buf.size()) break;
+	}
+	return final;
+}
+
 qint64 QUsbDevice::bulkSendFile(int endpoint, QIODevice &file) {
 	qint64 final = 0;
 	while(true) {

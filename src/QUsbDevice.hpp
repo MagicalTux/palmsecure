@@ -21,6 +21,7 @@ public:
 	// bulk transfer
 	qint64 bulkSendFile(int endpoint, const QString &file);
 	qint64 bulkSendFile(int endpoint, QIODevice &file);
+	qint64 bulkSend(int endpoint, const QByteArray &buf);
 	QByteArray bulkReceive(int endpoint, qint64 len);
 
 private:

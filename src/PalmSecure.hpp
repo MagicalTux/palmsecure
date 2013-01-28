@@ -24,7 +24,6 @@ private:
 	QTimer scan;
 	QUsbDevice *dev;
 	bool scan_first;
-	QByteArray mask;
 	QImage bufToImage(const QByteArray &buf, int w, int h);
 };
 
