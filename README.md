@@ -5,7 +5,8 @@ This driver will initialize the PalmSecure, and read images from it.
 Remaining to do:
 
 * Correctly detect position of hand and offer advice for better placement
-* ability to compare vein-prints
+* ability to compare vein-prints (considering use of OpenCV)
+* A lot of other stuff
 
 Stuff that works:
 
