@@ -1,6 +1,7 @@
 #include "PalmSecure.hpp"
 #include "QUsbDevice.hpp"
 #include <QFile>
+#include <QColor>
 
 PalmSecure::PalmSecure() {
 	connect(&scan, SIGNAL(timeout()), this, SLOT(do_detect()));
@@ -38,6 +39,11 @@ QString PalmSecure::deviceName() {
 }
 
 bool PalmSecure::open() {
+	QFile m("lib/mask_2696b463.mask");
+	if (!m.open(QIODevice::ReadOnly)) return false;
+	mask = m.readAll();
+	m.close();
+
 	dev = usb.getFirstDevice(0x04c5, 0x1084); // FUJITSU Imaging Device
 	if (dev == NULL) {
 		qDebug("PalmSecure: failed to open device");
@@ -106,11 +112,26 @@ void PalmSecure::do_detect() {
 	bool ok = true;
 	for(int i = 0; i < 4; i++) if ((d[i] < 40) || (d[i] > 50)) { ok = false; break; }
 	if (ok) {
-		captureLarge();
+		QList<QImage> list = captureLarge();
+		list.at(0).save("capture_1.png");
+		list.at(1).save("capture_2.png");
+		list.at(2).save("capture_3.png");
 	}
 }
 
-void PalmSecure::captureLarge() {
+QImage PalmSecure::bufToImage(const QByteArray &buf, int w, int h) {
+	QImage res = QImage(w, h, QImage::Format_Indexed8);
+	for(int i = 0; i < 256; i++) res.setColor(i, QColor(i, i, i).rgb());
+
+	for(int y = 0; y < h; y++)
+		for(int x = 0; x < w; x++)
+			res.setPixel(x, y, (unsigned char)buf.at(y*w+x));
+
+	return res;
+}
+
+QList<QImage> PalmSecure::captureLarge() {
+	QList<QImage> res;
 	qDebug("Capture!");
 	dev->controlTransfer(0xc0, 0x4e, 0, 0, 3); // returns 4e0100
 	dev->controlTransfer(0xc0, 0x4e, 1, 0, 3); // returns 4e0100
@@ -127,28 +148,37 @@ void PalmSecure::captureLarge() {
 	dev->controlTransfer(0xc0, 0x43, 0, 0, 3); // returns 430100
 	dev->controlTransfer(0xc0, 0x4a, 0, 480, 5); // returns 4a0100b004 - image height?
 	dev->controlTransfer(0xc0, 0x44, 0, 0, 6); // returns 440100b00400
+
 	qDebug("Capture 1");
-	QByteArray dat1 = dev->bulkReceive(2, 307200); // vein data
-	QFile f("data1.dat"); f.open(QIODevice::WriteOnly | QIODevice::Truncate); f.write(dat1); f.close();
-	dev->controlTransfer(0xc0, 0x44, 0, 1, 6); // returns 440100b00400
+	QByteArray dat = dev->bulkReceive(2, 307200); // vein data, 640x480
+
+	// apply mask
+	for(int i = 0; i < 240*640; i++)
+		dat[i+120*640] = dat.at(i+120*640) ^ mask.at(i);
+
+	res.append(bufToImage(dat, 640, 480));
+
 	qDebug("Capture 2");
-	QByteArray dat2 = dev->bulkReceive(2, 307200); // normal picture
-	QFile f2("data2.dat"); f2.open(QIODevice::WriteOnly | QIODevice::Truncate); f2.write(dat2); f2.close();
+	dev->controlTransfer(0xc0, 0x44, 0, 1, 6); // returns 440100b00400
+	dat = dev->bulkReceive(2, 307200); // normal picture
+	res.append(bufToImage(dat, 640, 480));
+
+	qDebug("Capture 3");
 	dev->controlTransfer(0xc0, 0x4d, 0x78, 240, 5); // returns 4d01005802
 	dev->controlTransfer(0xc0, 0x44, 3, 2, 6); // returns 440100580200
-	qDebug("Capture 3");
-	QByteArray dat3 = dev->bulkReceive(2, 153600); // "4 dots"
-
-	// OK, write to file
-	QFile f3("data3.dat"); f3.open(QIODevice::WriteOnly | QIODevice::Truncate); f3.write(dat3); f3.close();
+	dat = dev->bulkReceive(2, 153600); // "4 dots"
+	res.append(bufToImage(dat, 640, 240));
 
 	// switch off light?
 	dev->controlTransfer(0xc0, 0x27, 7, 1, 8); // returns 2707000000000000
 	dev->controlTransfer(0xc0, 0x27, 8, 1, 8); // returns 2708000000000000
 	dev->controlTransfer(0xc0, 0x27, 0, 1, 6); // returns 270000280000
+
+	return res;
 }
 
-void PalmSecure::captureSmall() {
+QList<QImage> PalmSecure::captureSmall() {
+	QList<QImage> res;
 	dev->controlTransfer(0xc0, 0x4e, 0, 0, 3); // returns 4e0100
 	dev->controlTransfer(0xc0, 0x4e, 1, 0, 3); // returns 4e0100
 	dev->controlTransfer(0xc0, 0x4e, 2, 0, 3); // returns 4e0100
@@ -166,6 +196,10 @@ void PalmSecure::captureSmall() {
 	dev->controlTransfer(0xc0, 0x44, 2, 0, 6); // returns 440100f00000
 	qDebug("Capture 4");
 	QByteArray dat4 = dev->bulkReceive(2, 61440);
+	// apply mask
+	for(int i = 0; i < 96*640; i++) {
+		dat4[i] = dat4.at(i) ^ mask.at(i);
+	}
 	QFile f4("data4.dat"); f4.open(QIODevice::WriteOnly | QIODevice::Truncate); f4.write(dat4); f4.close();
 	dev->controlTransfer(0xc0, 0x44, 2, 1, 6); // returns 440100f00000
 	qDebug("Capture 5");
@@ -181,5 +215,7 @@ void PalmSecure::captureSmall() {
 	dev->controlTransfer(0xc0, 0x27, 7, 1, 8); // returns 2707000000000000
 	dev->controlTransfer(0xc0, 0x27, 8, 1, 8); // returns 2708000000000000
 	dev->controlTransfer(0xc0, 0x27, 0, 1, 6); // returns 270000280000
+
+	return res;
 }
 

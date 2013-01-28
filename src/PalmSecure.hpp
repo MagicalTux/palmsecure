@@ -1,5 +1,7 @@
 #include <QObject>
 #include <QTimer>
+#include <QList>
+#include <QImage>
 #include "QUsb.hpp"
 
 class PalmSecure: public QObject {
@@ -8,8 +10,8 @@ public:
 	PalmSecure();
 
 	bool open();
-	void captureLarge();
-	void captureSmall();
+	QList<QImage> captureLarge();
+	QList<QImage> captureSmall();
 	QString deviceName();
 
 public slots:
@@ -22,5 +24,7 @@ private:
 	QTimer scan;
 	QUsbDevice *dev;
 	bool scan_first;
+	QByteArray mask;
+	QImage bufToImage(const QByteArray &buf, int w, int h);
 };
 
