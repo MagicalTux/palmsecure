@@ -170,6 +170,7 @@ QList<QImage> PalmSecure::captureLarge() {
 	dev->controlTransfer(0xc0, 0x27, 7, 1, 8); // returns 2707000000000000
 	dev->controlTransfer(0xc0, 0x27, 8, 1, 8); // returns 2708000000000000
 	dev->controlTransfer(0xc0, 0x27, 0, 1, 6); // returns 270000280000
+	scan_first = true;
 
 	return res;
 }
@@ -212,6 +213,7 @@ QList<QImage> PalmSecure::captureSmall() {
 	dev->controlTransfer(0xc0, 0x27, 7, 1, 8); // returns 2707000000000000
 	dev->controlTransfer(0xc0, 0x27, 8, 1, 8); // returns 2708000000000000
 	dev->controlTransfer(0xc0, 0x27, 0, 1, 6); // returns 270000280000
+	scan_first = true;
 
 	return res;
 }
