@@ -3,6 +3,30 @@
 #include <QFile>
 
 PalmSecure::PalmSecure() {
+	connect(&scan, SIGNAL(timeout()), this, SLOT(do_detect()));
+}
+
+void PalmSecure::start() {
+	if (scan.isActive()) return;
+
+	// switch on light?
+	dev->controlTransfer(0xc0, 0x27, 0x07, 1, 8); // returns 2707000000000000
+	dev->controlTransfer(0xc0, 0x27, 0x08, 1, 8); // returns 2708000000000000
+	dev->controlTransfer(0xc0, 0x27, 0x00, 1, 6); // returns 270000280000
+
+	scan_first = true;
+
+	scan.start(200);
+}
+
+void PalmSecure::stop() {
+	if (!scan.isActive()) return;
+	scan.stop();
+
+	// stop light?
+	dev->controlTransfer(0xc0, 0x27, 0x07, 0, 8); // returns ?
+	dev->controlTransfer(0xc0, 0x27, 0x08, 0, 8); // returns ?
+	dev->controlTransfer(0xc0, 0x27, 0x00, 0, 6); // returns ?
 }
 
 QString PalmSecure::deviceName() {
@@ -71,28 +95,18 @@ bool PalmSecure::open() {
 	return true;
 }
 
-void PalmSecure::detect() {
-	qDebug("PalmSecure: capture");
-
-	// switch on light?
-	dev->controlTransfer(0xc0, 0x27, 0x07, 1, 8); // returns 2707000000000000
-	dev->controlTransfer(0xc0, 0x27, 0x08, 1, 8); // returns 2708000000000000
-	dev->controlTransfer(0xc0, 0x27, 0x00, 1, 6); // returns 270000280000
-
-	while(true) {
-		QByteArray val1 = dev->controlTransfer(0xc0, 0x4d, 0x78, 240, 5); // returns 4d01005802
-		QByteArray val2 = dev->controlTransfer(0xc0, 0x58, 0xffce, 0xf0f, 56); // returns 5801000000000808080808090809090808080809080908090808090807080808080808080808080909080908080908080808080808080800
-		qDebug("CHECK [%s] [%s]", val1.toHex().constData(), val2.toHex().constData());
-		int d[4];
-		for(int i = 0; i < 4; i++) d[i] = (unsigned char)val2.at(2+i);
-		qDebug("DIST VALUE=%d,%d,%d,%d", d[0], d[1], d[2], d[3]);
-		bool ok = true;
-		for(int i = 0; i < 4; i++) if ((d[i] < 40) || (d[i] > 50)) { ok = false; break; }
-		if (ok) {
-			captureLarge();
-			return;
-		}
-		usleep(20000);
+void PalmSecure::do_detect() {
+	QByteArray val1 = dev->controlTransfer(0xc0, 0x4d, 0x78, 240, 5); // returns 4d01005802
+	QByteArray val2 = dev->controlTransfer(0xc0, 0x58, scan_first?0xffce:0, 0xf0f, 56); // returns 5801000000000808080808090809090808080809080908090808090807080808080808080808080909080908080908080808080808080800
+	scan_first = false;
+	qDebug("CHECK [%s] [%s]", val1.toHex().constData(), val2.toHex().constData());
+	int d[4];
+	for(int i = 0; i < 4; i++) d[i] = (unsigned char)val2.at(2+i);
+	qDebug("DIST VALUE=%d,%d,%d,%d", d[0], d[1], d[2], d[3]);
+	bool ok = true;
+	for(int i = 0; i < 4; i++) if ((d[i] < 40) || (d[i] > 50)) { ok = false; break; }
+	if (ok) {
+		captureLarge();
 	}
 }
 

@@ -7,7 +7,7 @@ int main(int argc, char *argv[]) {
 	PalmSecure *p = new PalmSecure();
 	if (!p->open()) return 2; // failed
 
-	p->detect();
+	p->start();
 
 	return app.exec();
 }
